@@ -33,3 +33,13 @@ hs_err_pid*
 
 # Gradle
 .gradle
+
+# Elastic Beanstalk Files
+
+.elasticbeanstalk/*
+
+!.elasticbeanstalk/*.cfg.yml
+
+!.elasticbeanstalk/*.global.yml
+
+/config/
