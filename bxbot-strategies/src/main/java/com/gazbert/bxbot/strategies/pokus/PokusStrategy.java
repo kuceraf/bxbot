@@ -1,17 +1,18 @@
-package com.gazbert.bxbot.strategies;
+package com.gazbert.bxbot.strategies.pokus;
 
 import com.gazbert.bxbot.strategy.api.StrategyConfig;
 import com.gazbert.bxbot.strategy.api.StrategyException;
 import com.gazbert.bxbot.strategy.api.TradingStrategy;
 import com.gazbert.bxbot.trading.api.*;
-import com.google.common.base.MoreObjects;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.text.DecimalFormat;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * DEFINITIONS:
@@ -37,8 +38,9 @@ public class PokusStrategy implements TradingStrategy {
     private Market market;
     private long executionRound = 1;
     private final String lineSeparator = System.getProperty("line.separator");
-    private OrderState lastOrder = new OrderState();
-
+    private OrderState lastOrder;
+    //key = orderId
+    private Map<String, OrderState> orderStateMap = new HashMap();
     /** MOJE KONSTANTY **/
     // TODO nacitat je z {project-root}/config/
     /**
@@ -56,7 +58,7 @@ public class PokusStrategy implements TradingStrategy {
      * X = 0,00131579 BTC
      * Za 10 EUR si mohu koupit 0,00131579 BTC pri cene BTC/EUR = 7,599.99.
      */
-    final private BigDecimal COUNTER_CURRENCY_BUY_ORDER_AMOUNT = BigDecimal.valueOf(100);
+    final private BigDecimal COUNTER_CURRENCY_BUY_ORDER_AMOUNT = BigDecimal.valueOf(200);
 
     /**
      * The minimum % gain was to achieve before placing a SELL oder.
@@ -111,7 +113,7 @@ public class PokusStrategy implements TradingStrategy {
             LOG.info(() -> market.getName() + " Lowest Current ASK price (sell order) = " +
                     new DecimalFormat("#.########").format(currentAskPrice));
 
-            if(lastOrder.type == null) {
+            if(lastOrder == null) {
                 // zaciname - musime nejdrive nakoupit
                 executeFirstTimeBuyOrder(currentBidPrice);
             }
@@ -119,11 +121,11 @@ public class PokusStrategy implements TradingStrategy {
             switch (lastOrder.type) {
                 case BUY:
                     // umistili jsme pozadavek na nakup - zkusime prodej se ziskem
-                    executeTryForSellOrderAlgo();
+                    tryPlaceSellOrder();
                     break;
                 case SELL:
                     // co jsme nakoupili je prodano - nakoupime znovu
-                    executeTryForBuyOrderAlgo(currentBidPrice, currentAskPrice);
+                    tryPlaceBuyOrder(currentBidPrice, currentAskPrice);
                     break;
                 default:
             }
@@ -157,7 +159,7 @@ public class PokusStrategy implements TradingStrategy {
      * @throws StrategyException if an unexpected exception is received from the Exchange Adapter.
      *                           Throwing this exception indicates we want the Trading Engine to shutdown the bot.
      */
-    private void executeTryForBuyOrderAlgo(BigDecimal currentBidPrice, BigDecimal currentAskPrice) throws StrategyException {
+    private void tryPlaceBuyOrder(BigDecimal currentBidPrice, BigDecimal currentAskPrice) throws StrategyException {
         // TODO nepouzit - https://docs.spring.io/spring/docs/1.2.x/javadoc-api/org/springframework/util/Assert.html?
         if(lastOrder.type == OrderType.BUY){
             throw new StrategyException("Wrong strategy execution flow - two successive BUY orders");
@@ -165,8 +167,8 @@ public class PokusStrategy implements TradingStrategy {
 
         try {
             if (isLastOrderFilled()) {
-                LOG.info("{} Last SELL order (Id:{}) filled at {}",
-                        market.getName(),
+
+                LOG.info("^^^ Yay!!! Last SELL order (Id:{}) filled at {}",
                         lastOrder.id,
                         lastOrder.price);
                 // Prodej by realizovat - muzeme znovu nakoupit
@@ -230,7 +232,7 @@ public class PokusStrategy implements TradingStrategy {
      * @throws StrategyException if an unexpected exception is received from the Exchange Adapter.
      *                           Throwing this exception indicates we want the Trading Engine to shutdown the bot.
      */
-    private void executeTryForSellOrderAlgo() throws StrategyException {
+    private void tryPlaceSellOrder() throws StrategyException {
         // TODO nepouzit - https://docs.spring.io/spring/docs/1.2.x/javadoc-api/org/springframework/util/Assert.html?
         if(lastOrder.type == OrderType.SELL){
             throw new StrategyException("Wrong strategy execution flow - two successive SELL orders");
@@ -239,8 +241,7 @@ public class PokusStrategy implements TradingStrategy {
         try {
             if (isLastOrderFilled()) {
                 // Posledni BUY order za nami stanovenou cenu (BID price) se uskutecnil, ted to chci zas prodat se ziskem
-                LOG.info("{} Last BUY order (Id:{}) filled at {}",
-                        market.getName(),
+                LOG.info("^^^ Yay!!! Last BUY order (Id:{}) filled at {}",
                         lastOrder.id,
                         lastOrder.price);
                 /*
@@ -285,14 +286,19 @@ public class PokusStrategy implements TradingStrategy {
                         market.getName());
 
                 // Build the new sell order
-                lastOrder.id = tradingApi.createOrder(market.getId(), OrderType.SELL, lastOrder.amount, newAskPrice);
+                String orderId = tradingApi.createOrder(market.getId(), OrderType.SELL, lastOrder.amount, newAskPrice);
                 LOG.info("{} New SELL Order sent successfully. ID: {}",
                         market.getName(),
                         lastOrder.id);
 
+                OrderState orderState = new OrderState();
                 // update last order state
-                lastOrder.price = newAskPrice;
-                lastOrder.type = OrderType.SELL;
+                orderState.id = orderId;
+                orderState.price = newAskPrice;
+                orderState.type = OrderType.SELL;
+                orderState.amount = lastOrder.amount;
+                orderStateMap.put(orderId, orderState);
+                lastOrder = orderState;
             } else {
                 /*
                  * BUY order has not filled yet.
@@ -373,7 +379,7 @@ public class PokusStrategy implements TradingStrategy {
                 break;
             }
         }
-        // If the order is not there, it must have been filled.
+        // If the order is not there, it must be filled.
         return !lastOrderFound;
     }
 
@@ -390,19 +396,23 @@ public class PokusStrategy implements TradingStrategy {
         final BigDecimal amountOfBaseCurrencyToBuy = getAmountOfBaseCurrencyToBuyForGivenCounterCurrencyAmount(COUNTER_CURRENCY_BUY_ORDER_AMOUNT);
 
         // Send the order to the exchange
-        LOG.info("{} Sending initial BUY order to exchange --->",
+        LOG.info("{} Sending BUY order to exchange --->",
                 market.getName());
 
-        lastOrder.id = tradingApi.createOrder(market.getId(), OrderType.BUY, amountOfBaseCurrencyToBuy, currentBidPrice);
+        String orderId = tradingApi.createOrder(market.getId(), OrderType.BUY, amountOfBaseCurrencyToBuy, currentBidPrice);
+        OrderState orderState = new OrderState();
         // TODO log it into MongoDB
-        LOG.info("{} Initial BUY Order sent successfully. ID: {}",
+        LOG.info("{} BUY Order sent successfully. ID: {}",
                 market.getName(),
-                lastOrder.id);
+                orderId);
 
         // update last order details
-        lastOrder.price = currentBidPrice;
-        lastOrder.type = OrderType.BUY;
-        lastOrder.amount = amountOfBaseCurrencyToBuy;
+        orderState.id = orderId;
+        orderState.price = currentBidPrice;
+        orderState.type = OrderType.BUY;
+        orderState.amount = amountOfBaseCurrencyToBuy;
+        orderStateMap.put(orderId, orderState);
+        lastOrder = orderState;
     }
 
     /**
@@ -451,47 +461,5 @@ public class PokusStrategy implements TradingStrategy {
         );
 
         return amountOfBaseCurrencyToBuy;
-    }
-
-    /**
-     * <p>
-     * Models the state of an Order we have placed on the exchange.
-     * </p>
-     * <p>
-     * Typically, you would maintain order state in a database or use some other persistent datasource to recover from
-     * restarts and for audit purposes. In this example, we are storing the state in memory to keep it simple.
-     * </p>
-     */
-    private static class OrderState {
-
-        /**
-         * Id - default to null.
-         */
-        private String id = null;
-
-        /**
-         * Type: buy/sell. We default to null which means no order has been placed yet, i.e. we've just started!
-         */
-        private OrderType type = null;
-
-        /**
-         * Price to buy/sell at - default to zero.
-         */
-        private BigDecimal price = BigDecimal.ZERO;
-
-        /**
-         * Number of units to buy/sell - default to zero.
-         */
-        private BigDecimal amount = BigDecimal.ZERO;
-
-        @Override
-        public String toString() {
-            return MoreObjects.toStringHelper(this)
-                    .add("id", id)
-                    .add("type", type)
-                    .add("price", price)
-                    .add("amount", amount)
-                    .toString();
-        }
     }
 }

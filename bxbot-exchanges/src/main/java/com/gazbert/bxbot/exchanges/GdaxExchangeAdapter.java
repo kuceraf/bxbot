@@ -46,6 +46,7 @@ import java.text.DecimalFormat;
 import java.time.Instant;
 import java.util.*;
 
+// TODO pouzit GDAX wrapper https://github.com/irufus/gdax-java/tree/master/src/main/java/com/coinbase/exchange/api/orders
 /**
  * <p>
  * Exchange Adapter for integrating with the GDAX (formerly Coinbase) exchange.
@@ -98,12 +99,14 @@ public final class GdaxExchangeAdapter extends AbstractExchangeAdapter implement
     /**
      * The public API URI.
      */
+//    https://api-public.sandbox.gdax.com
+//    https://api.gdax.com/
     private static final String PUBLIC_API_BASE_URL = "https://api.gdax.com/";
 
     /**
      * The Authenticated API URI - it is the same as the Authenticated URL as of 12 Jul 2016.
      */
-    private static final String AUTHENTICATED_API_URL = PUBLIC_API_BASE_URL;
+    private static final String AUTHENTICATED_API_URL = "https://api-public.sandbox.gdax.com/";
 
     /**
      * Used for reporting unexpected errors.
