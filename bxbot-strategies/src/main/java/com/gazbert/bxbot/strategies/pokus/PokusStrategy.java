@@ -13,6 +13,8 @@ import java.text.DecimalFormat;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collector;
+import java.util.stream.Collectors;
 
 /**
  * DEFINITIONS:
@@ -83,10 +85,39 @@ public class PokusStrategy implements TradingStrategy {
         LOG.info(() -> "Trading Strategy initialised successfully!");
     }
 
+    private void checkProfitability() throws StrategyException {
+        Map<Boolean, List<OrderState>> ordersSplitMap = orderStateMap.values().stream()
+                .collect(
+                        Collectors.partitioningBy(orderState -> OrderType.BUY.equals(orderState.type))
+                );
+
+        List<OrderState> buyOrderStates = ordersSplitMap.get(true);
+        List<OrderState> sellOrderStates = ordersSplitMap.get(false);
+
+        BigDecimal buyOrdersTotalCost = buyOrderStates.stream()
+                .map(buyOrder -> buyOrder.price.multiply(buyOrder.amount))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal sellOrdersTotalCost = sellOrderStates.stream()
+                .map(buyOrder -> buyOrder.price.multiply(buyOrder.amount))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        LOG.info("Buy orders ({}) total cost {} EUR, sell orders ({}) total cost {} EUR",
+                buyOrderStates.size(),
+                buyOrdersTotalCost,
+                sellOrderStates.size(),
+                sellOrdersTotalCost);
+
+        if (sellOrdersTotalCost.compareTo(buyOrdersTotalCost) > 0) {
+//            LOG.error("Naklady jsou vetsi nez vynosy - koncim");
+            throw new StrategyException("Naklady jsou vetsi nez vynosy - koncim");
+        }
+    }
+
     @Override
     public void execute() throws StrategyException {
         LOG.info("Running on market {} ({} times)", market.getName(), executionRound);
-
+        checkProfitability();
         try {
             // Grab the latest order book for the market.
             final MarketOrderBook orderBook = tradingApi.getMarketOrders(market.getId());
