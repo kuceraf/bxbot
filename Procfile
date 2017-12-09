@@ -1,0 +1,1 @@
+web: java -jar bxbot-app-0.8.5-SNAPSHOT.jar
