@@ -42,8 +42,8 @@ public class PokusStrategy implements TradingStrategy {
     private final String lineSeparator = System.getProperty("line.separator");
     private OrderState lastOrder;
     //key = orderId
-    Map<String, OrderState> buyOrderStates = new HashMap<>();
-    Map<String, OrderState> sellOrderStates = new HashMap<>();
+    private Map<String, OrderState> buyOrderStates = new HashMap<>();
+    private Map<String, OrderState> sellOrderStates = new HashMap<>();
     /** MOJE KONSTANTY **/
     // TODO nacitat je z {project-root}/config/
     /**
@@ -61,12 +61,12 @@ public class PokusStrategy implements TradingStrategy {
      * X = 0,00131579 BTC
      * Za 10 EUR si mohu koupit 0,00131579 BTC pri cene BTC/EUR = 7,599.99.
      */
-    final private BigDecimal COUNTER_CURRENCY_BUY_ORDER_AMOUNT = BigDecimal.valueOf(200);
+    public static final BigDecimal COUNTER_CURRENCY_BUY_ORDER_AMOUNT = BigDecimal.valueOf(200);
 
     /**
      * The minimum % gain was to achieve before placing a SELL oder.
      */
-    final private BigDecimal MINIMUM_PERCENTAGE_GAIN = BigDecimal.valueOf(0.02);
+    public static final BigDecimal MINIMUM_PERCENTAGE_GAIN = BigDecimal.valueOf(0.02);
 
     /**
      * Initialises the Trading Strategy.
