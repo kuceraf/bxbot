@@ -42,7 +42,8 @@ public class PokusStrategy implements TradingStrategy {
     private final String lineSeparator = System.getProperty("line.separator");
     private OrderState lastOrder;
     //key = orderId
-    private Map<String, OrderState> orderStateMap = new HashMap();
+    Map<String, OrderState> buyOrderStates = new HashMap<>();
+    Map<String, OrderState> sellOrderStates = new HashMap<>();
     /** MOJE KONSTANTY **/
     // TODO nacitat je z {project-root}/config/
     /**
@@ -86,19 +87,12 @@ public class PokusStrategy implements TradingStrategy {
     }
 
     private void checkProfitability() throws StrategyException {
-        Map<Boolean, List<OrderState>> ordersSplitMap = orderStateMap.values().stream()
-                .collect(
-                        Collectors.partitioningBy(orderState -> OrderType.BUY.equals(orderState.type))
-                );
 
-        List<OrderState> buyOrderStates = ordersSplitMap.get(true);
-        List<OrderState> sellOrderStates = ordersSplitMap.get(false);
-
-        BigDecimal buyOrdersTotalCost = buyOrderStates.stream()
+        BigDecimal buyOrdersTotalCost = buyOrderStates.values().stream()
                 .map(buyOrder -> buyOrder.price.multiply(buyOrder.amount))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        BigDecimal sellOrdersTotalCost = sellOrderStates.stream()
+        BigDecimal sellOrdersTotalCost = sellOrderStates.values().stream()
                 .map(buyOrder -> buyOrder.price.multiply(buyOrder.amount))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
@@ -108,10 +102,9 @@ public class PokusStrategy implements TradingStrategy {
                 sellOrderStates.size(),
                 sellOrdersTotalCost);
 
-        if (sellOrdersTotalCost.compareTo(buyOrdersTotalCost) > 0) {
-//            LOG.error("Naklady jsou vetsi nez vynosy - koncim");
-            throw new StrategyException("Naklady jsou vetsi nez vynosy - koncim");
-        }
+//        if (sellOrdersTotalCost.compareTo(buyOrdersTotalCost) > 0) {
+//            throw new StrategyException("Naklady jsou vetsi nez vynosy - koncim");
+//        }
     }
 
     @Override
@@ -328,7 +321,7 @@ public class PokusStrategy implements TradingStrategy {
                 orderState.price = newAskPrice;
                 orderState.type = OrderType.SELL;
                 orderState.amount = lastOrder.amount;
-                orderStateMap.put(orderId, orderState);
+                sellOrderStates.put(orderId, orderState);
                 lastOrder = orderState;
             } else {
                 /*
@@ -442,7 +435,7 @@ public class PokusStrategy implements TradingStrategy {
         orderState.price = currentBidPrice;
         orderState.type = OrderType.BUY;
         orderState.amount = amountOfBaseCurrencyToBuy;
-        orderStateMap.put(orderId, orderState);
+        buyOrderStates.put(orderId, orderState);
         lastOrder = orderState;
     }
 
