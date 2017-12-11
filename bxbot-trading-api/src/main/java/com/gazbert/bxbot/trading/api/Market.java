@@ -32,7 +32,7 @@ import com.google.common.base.Objects;
  * @author gazbert
  * @since 1.0
  */
-public final class Market {
+public class Market {
 
     /**
      * Name of the market
