@@ -61,7 +61,7 @@ public class PokusStrategy implements TradingStrategy {
      * X = 0,00131579 BTC
      * Za 10 EUR si mohu koupit 0,00131579 BTC pri cene BTC/EUR = 7,599.99.
      */
-    public static final BigDecimal COUNTER_CURRENCY_BUY_ORDER_AMOUNT = BigDecimal.valueOf(200);
+    public static final BigDecimal COUNTER_CURRENCY_BUY_ORDER_AMOUNT = BigDecimal.valueOf(250);
 
     /**
      * The minimum % gain was to achieve before placing a SELL oder.

@@ -22,20 +22,21 @@
                 <include>config/*.xml</include>
                 <include>config/application.properties</include>
                 <include>config/log4j2.xml</include>
+                <include>Procfile</include>
             </includes>
         </fileSet>
 
         <!--  bit of a hack to create the empty libs dir in dist - must be better way? -->
-        <fileSet>
-            <directory>${project.build.directory}</directory>
-            <outputDirectory>/</outputDirectory>
-            <includes>
-                <include>libs</include>
-            </includes>
-        </fileSet>
+        <!--<fileSet>-->
+            <!--<directory>${project.build.directory}</directory>-->
+            <!--<outputDirectory>/</outputDirectory>-->
+            <!--<includes>-->
+                <!--<include>libs</include>-->
+            <!--</includes>-->
+        <!--</fileSet>-->
         <fileSet>
             <directory>bxbot-app/target</directory>
-            <outputDirectory>libs</outputDirectory>
+            <outputDirectory>/</outputDirectory>
             <includes>
                 <include>bxbot-app-*.jar</include>
             </includes>
