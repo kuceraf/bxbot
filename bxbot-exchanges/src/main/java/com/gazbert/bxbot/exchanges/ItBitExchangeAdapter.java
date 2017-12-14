@@ -27,6 +27,10 @@ import com.gazbert.bxbot.exchange.api.AuthenticationConfig;
 import com.gazbert.bxbot.exchange.api.ExchangeAdapter;
 import com.gazbert.bxbot.exchange.api.ExchangeConfig;
 import com.gazbert.bxbot.exchange.api.OptionalConfig;
+import com.gazbert.bxbot.exchanges.trading.api.impl.BalanceInfoImpl;
+import com.gazbert.bxbot.exchanges.trading.api.impl.MarketOrderBookImpl;
+import com.gazbert.bxbot.exchanges.trading.api.impl.MarketOrderImpl;
+import com.gazbert.bxbot.exchanges.trading.api.impl.OpenOrderImpl;
 import com.gazbert.bxbot.trading.api.*;
 import com.google.common.base.MoreObjects;
 import com.google.gson.Gson;
@@ -421,7 +425,7 @@ public final class ItBitExchangeAdapter extends AbstractExchangeAdapter implemen
                                     "Unrecognised order type received in getYourOpenOrders(). Value: " + itBitOpenOrder.side);
                     }
 
-                    final OpenOrder order = new OpenOrder(
+                    final OpenOrder order = new OpenOrderImpl(
                             itBitOpenOrder.id,
                             Date.from(Instant.parse(itBitOpenOrder.createdTime)), // format: 2015-10-01T18:10:39.3930000Z
                             marketId,
@@ -472,7 +476,7 @@ public final class ItBitExchangeAdapter extends AbstractExchangeAdapter implemen
 
                 final List<MarketOrder> buyOrders = new ArrayList<>();
                 for (ItBitMarketOrder itBitBuyOrder : orderBook.bids) {
-                    final MarketOrder buyOrder = new MarketOrder(
+                    final MarketOrder buyOrder = new MarketOrderImpl(
                             OrderType.BUY,
                             itBitBuyOrder.get(0),
                             itBitBuyOrder.get(1),
@@ -482,7 +486,7 @@ public final class ItBitExchangeAdapter extends AbstractExchangeAdapter implemen
 
                 final List<MarketOrder> sellOrders = new ArrayList<>();
                 for (ItBitMarketOrder itBitSellOrder : orderBook.asks) {
-                    final MarketOrder sellOrder = new MarketOrder(
+                    final MarketOrder sellOrder = new MarketOrderImpl(
                             OrderType.SELL,
                             itBitSellOrder.get(0),
                             itBitSellOrder.get(1),
@@ -490,7 +494,7 @@ public final class ItBitExchangeAdapter extends AbstractExchangeAdapter implemen
                     sellOrders.add(sellOrder);
                 }
 
-                return new MarketOrderBook(marketId, sellOrders, buyOrders);
+                return new MarketOrderBookImpl(marketId, sellOrders, buyOrders);
             } else {
                 final String errorMsg = "Failed to get market order book from exchange. Details: " + response;
                 LOG.error(errorMsg);
@@ -590,7 +594,7 @@ public final class ItBitExchangeAdapter extends AbstractExchangeAdapter implemen
                 }
 
                 // 2nd arg of BalanceInfo constructor for reserved/on-hold balances is not provided by exchange.
-                return new BalanceInfo(balancesAvailable, new HashMap<>());
+                return new BalanceInfoImpl(balancesAvailable, new HashMap<>());
             } else {
                 final String errorMsg = "Failed to get your wallet balance info from exchange. Details: " + response;
                 LOG.error(errorMsg);
@@ -843,14 +847,9 @@ public final class ItBitExchangeAdapter extends AbstractExchangeAdapter implemen
      */
     private ExchangeHttpResponse sendPublicRequestToExchange(String apiMethod) throws ExchangeNetworkException, TradingApiException {
 
-        // Request headers required by Exchange
-        final Map<String, String> requestHeaders = new HashMap<>();
-        requestHeaders.put("Content-Type", "application/x-www-form-urlencoded");
-
         try {
-
             final URL url = new URL(PUBLIC_API_BASE_URL + apiMethod);
-            return sendNetworkRequest(url, "GET", null, requestHeaders);
+            return makeNetworkRequest(url, "GET", null, new HashMap<>());
 
         } catch (MalformedURLException e) {
             final String errorMsg = UNEXPECTED_IO_ERROR_MSG;
@@ -995,7 +994,7 @@ public final class ItBitExchangeAdapter extends AbstractExchangeAdapter implemen
             final String signature = DatatypeConverter.printBase64Binary(mac.doFinal());
 
             // Request headers required by Exchange
-            final Map<String, String> requestHeaders = new HashMap<>();
+            final Map<String, String> requestHeaders = getHeaderParamMap();
             requestHeaders.put("Content-Type", "application/json");
 
             // Add Authorization header
@@ -1007,7 +1006,7 @@ public final class ItBitExchangeAdapter extends AbstractExchangeAdapter implemen
             requestHeaders.put("X-Auth-Nonce", Long.toString(nonce));
 
             final URL url = new URL(invocationUrl);
-            return sendNetworkRequest(url, httpMethod, requestBody, requestHeaders);
+            return makeNetworkRequest(url, httpMethod, requestBody, requestHeaders);
 
         } catch (MalformedURLException | UnsupportedEncodingException e) {
             final String errorMsg = UNEXPECTED_IO_ERROR_MSG;
@@ -1108,5 +1107,20 @@ public final class ItBitExchangeAdapter extends AbstractExchangeAdapter implemen
      */
     private Map<String, String> getRequestParamMap() {
         return new HashMap<>();
+    }
+
+    /*
+     * Hack for unit-testing header params passed to transport layer.
+     */
+    private Map<String, String> getHeaderParamMap() {
+        return new HashMap<>();
+    }
+
+    /*
+     * Hack for unit-testing transport layer.
+     */
+    private ExchangeHttpResponse makeNetworkRequest(URL url, String httpMethod, String postData, Map<String, String> requestHeaders)
+            throws TradingApiException, ExchangeNetworkException {
+        return super.sendNetworkRequest(url, httpMethod, postData, requestHeaders);
     }
 }

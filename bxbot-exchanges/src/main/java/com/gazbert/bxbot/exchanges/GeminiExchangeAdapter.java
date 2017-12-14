@@ -27,6 +27,10 @@ import com.gazbert.bxbot.exchange.api.AuthenticationConfig;
 import com.gazbert.bxbot.exchange.api.ExchangeAdapter;
 import com.gazbert.bxbot.exchange.api.ExchangeConfig;
 import com.gazbert.bxbot.exchange.api.OptionalConfig;
+import com.gazbert.bxbot.exchanges.trading.api.impl.BalanceInfoImpl;
+import com.gazbert.bxbot.exchanges.trading.api.impl.MarketOrderBookImpl;
+import com.gazbert.bxbot.exchanges.trading.api.impl.MarketOrderImpl;
+import com.gazbert.bxbot.exchanges.trading.api.impl.OpenOrderImpl;
 import com.gazbert.bxbot.trading.api.*;
 import com.google.common.base.MoreObjects;
 import com.google.gson.Gson;
@@ -351,7 +355,7 @@ public final class GeminiExchangeAdapter extends AbstractExchangeAdapter impleme
                                 "Unrecognised order type received in getYourOpenOrders(). Value: " + geminiOpenOrder.type);
                 }
 
-                final OpenOrder order = new OpenOrder(
+                final OpenOrder order = new OpenOrderImpl(
                         Long.toString(geminiOpenOrder.order_id),
                         Date.from(Instant.ofEpochMilli(geminiOpenOrder.timestampms)),
                         marketId,
@@ -386,7 +390,7 @@ public final class GeminiExchangeAdapter extends AbstractExchangeAdapter impleme
 
             final List<MarketOrder> buyOrders = new ArrayList<>();
             for (GeminiMarketOrder geminiBuyOrder : orderBook.bids) {
-                final MarketOrder buyOrder = new MarketOrder(
+                final MarketOrder buyOrder = new MarketOrderImpl(
                         OrderType.BUY,
                         geminiBuyOrder.price,
                         geminiBuyOrder.amount,
@@ -396,7 +400,7 @@ public final class GeminiExchangeAdapter extends AbstractExchangeAdapter impleme
 
             final List<MarketOrder> sellOrders = new ArrayList<>();
             for (GeminiMarketOrder geminiSellOrder : orderBook.asks) {
-                final MarketOrder sellOrder = new MarketOrder(
+                final MarketOrder sellOrder = new MarketOrderImpl(
                         OrderType.SELL,
                         geminiSellOrder.price,
                         geminiSellOrder.amount,
@@ -404,7 +408,7 @@ public final class GeminiExchangeAdapter extends AbstractExchangeAdapter impleme
                 sellOrders.add(sellOrder);
             }
 
-            return new MarketOrderBook(marketId, sellOrders, buyOrders);
+            return new MarketOrderBookImpl(marketId, sellOrders, buyOrders);
 
         } catch (ExchangeNetworkException | TradingApiException e) {
             throw e;
@@ -451,7 +455,7 @@ public final class GeminiExchangeAdapter extends AbstractExchangeAdapter impleme
                     .forEach(accountBalance -> balancesAvailable.put(accountBalance.currency, accountBalance.available));
 
             // 2nd arg of BalanceInfo constructor for reserved/on-hold balances is not provided by exchange.
-            return new BalanceInfo(balancesAvailable, new HashMap<>());
+            return new BalanceInfoImpl(balancesAvailable, new HashMap<>());
 
         } catch (ExchangeNetworkException | TradingApiException e) {
             throw e;
@@ -666,14 +670,9 @@ public final class GeminiExchangeAdapter extends AbstractExchangeAdapter impleme
      */
     private ExchangeHttpResponse sendPublicRequestToExchange(String apiMethod) throws ExchangeNetworkException, TradingApiException {
 
-        // Request headers required by Exchange
-        final Map<String, String> requestHeaders = new HashMap<>();
-        requestHeaders.put("Content-Type", "application/x-www-form-urlencoded");
-
         try {
-
             final URL url = new URL(PUBLIC_API_BASE_URL + apiMethod);
-            return sendNetworkRequest(url, "GET", null, requestHeaders);
+            return makeNetworkRequest(url, "GET", null, new HashMap<>());
 
         } catch (MalformedURLException e) {
             final String errorMsg = UNEXPECTED_IO_ERROR_MSG;
@@ -771,7 +770,7 @@ public final class GeminiExchangeAdapter extends AbstractExchangeAdapter impleme
             final String signature = toHex(mac.doFinal()).toLowerCase();
 
             // Request headers required by Exchange
-            final Map<String, String> requestHeaders = new HashMap<>();
+            final Map<String, String> requestHeaders = getHeaderParamMap();
             requestHeaders.put("X-GEMINI-APIKEY", key);
             requestHeaders.put("X-GEMINI-PAYLOAD", base64payload);
             requestHeaders.put("X-GEMINI-SIGNATURE", signature);
@@ -780,7 +779,7 @@ public final class GeminiExchangeAdapter extends AbstractExchangeAdapter impleme
             requestHeaders.put("Content-Type", "application/json");
 
             final URL url = new URL(AUTHENTICATED_API_URL + apiMethod);
-            return sendNetworkRequest(url, "POST", paramsInJson, requestHeaders);
+            return makeNetworkRequest(url, "POST", paramsInJson, requestHeaders);
 
         } catch (MalformedURLException | UnsupportedEncodingException e) {
 
@@ -870,5 +869,20 @@ public final class GeminiExchangeAdapter extends AbstractExchangeAdapter impleme
      */
     private Map<String, String> getRequestParamMap() {
         return new HashMap<>();
+    }
+
+    /*
+     * Hack for unit-testing header params passed to transport layer.
+     */
+    private Map<String, String> getHeaderParamMap() {
+        return new HashMap<>();
+    }
+
+    /*
+     * Hack for unit-testing transport layer.
+     */
+    private ExchangeHttpResponse makeNetworkRequest(URL url, String httpMethod, String postData, Map<String, String> requestHeaders)
+            throws TradingApiException, ExchangeNetworkException {
+        return super.sendNetworkRequest(url, httpMethod, postData, requestHeaders);
     }
 }
