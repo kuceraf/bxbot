@@ -38,5 +38,7 @@ See log4j2 guide for more options: http://logging.apache.org/log4j/2.x/manual/ap
             <AppenderRef ref="BXBot_RollingFile"/>
             <AppenderRef ref="STDOUT"/>
         </Root>
+        <!--POZOR! - loguje authentication configuraci v plaintextu-->
+        <!--<logger name="com.gazbert.bxbot.exchanges.AbstractExchangeAdapter" level="DEBUG"/>-->
     </Loggers>
 </Configuration>
