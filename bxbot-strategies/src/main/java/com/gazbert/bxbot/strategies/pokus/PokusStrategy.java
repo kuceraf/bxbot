@@ -6,6 +6,7 @@ import com.gazbert.bxbot.strategy.api.TradingStrategy;
 import com.gazbert.bxbot.trading.api.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -25,7 +26,7 @@ import java.util.stream.Collectors;
  * An order book is an electronic list of buy and sell orders for a specific security or financial instrument, organized by price level.
  * The order book lists the number of shares being bid or offered at each price point
  */
-
+@Component
 public class PokusStrategy implements TradingStrategy {
     private static final Logger LOG = LogManager.getLogger();
 
@@ -61,7 +62,7 @@ public class PokusStrategy implements TradingStrategy {
      * X = 0,00131579 BTC
      * Za 10 EUR si mohu koupit 0,00131579 BTC pri cene BTC/EUR = 7,599.99.
      */
-    public static final BigDecimal COUNTER_CURRENCY_BUY_ORDER_AMOUNT = BigDecimal.valueOf(250);
+    public static final BigDecimal COUNTER_CURRENCY_BUY_ORDER_AMOUNT = BigDecimal.valueOf(700);
 
     /**
      * The minimum % gain was to achieve before placing a SELL oder.

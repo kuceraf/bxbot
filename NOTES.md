@@ -4,6 +4,6 @@
 
 ## AWS
 ##### Deploy eb
-`eb deploy --staged`
+`eb deploy bxbot-dev --staged`
 ##### Zapnout cloud watch 
 `eb logs -cw enable`
