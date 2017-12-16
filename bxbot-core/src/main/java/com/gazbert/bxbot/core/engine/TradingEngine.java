@@ -623,9 +623,16 @@ public class TradingEngine {
         TradingStrategy strategyImpl = null;
         if (tradingStrategyBeanName != null) {
             // if beanName is configured, try get the bean first
-            strategyImpl = (TradingStrategy) springContext.getBean(tradingStrategyBeanName);
+            try {
+                strategyImpl = (TradingStrategy) springContext.getBean(tradingStrategyBeanName);
+
+            } catch (NullPointerException e) {
+                final String errorMsg = "Failed to obtain bean [ "+tradingStrategyBeanName+"] from spring context";
+                LOG.error(errorMsg);
+                throw new IllegalArgumentException(errorMsg);
+            }
         }
-        if (strategyImpl != null) {
+        if (strategyImpl == null) {
             strategyImpl = ConfigurableComponentFactory.createComponent(tradingStrategyClassname);
         }
         return strategyImpl;

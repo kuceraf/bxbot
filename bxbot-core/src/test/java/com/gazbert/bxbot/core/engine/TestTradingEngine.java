@@ -112,7 +112,7 @@ public class TestTradingEngine {
     private static final String STRATEGY_NAME = "MACD Shorting algo";
     private static final String STRATEGY_DESCRIPTION = "MACD Shorting algo description";
     private static final String STRATEGY_IMPL_CLASS = "com.my.strats.MyMacdStrategy";
-    private static final String STRATEGY_IMPL_BEAN = "myMacdStrategy";
+    private static final String STRATEGY_IMPL_BEAN = null;
     private static final String STRATEGY_CONFIG_ITEM_NAME = "btc-sell-order-amount";
     private static final String STRATEGY_CONFIG_ITEM_VALUE = "0.2";
 
