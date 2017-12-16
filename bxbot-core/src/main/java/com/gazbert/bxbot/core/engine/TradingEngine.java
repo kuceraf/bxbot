@@ -595,12 +595,7 @@ public class TradingEngine {
                  * Load the Trading Strategy impl, instantiate it, set its config, and store in the cached
                  * Trading Strategy execution list.
                  */
-                TradingStrategy strategyImpl;
-                if (tradingStrategyBeanName != null) {
-                    strategyImpl = (TradingStrategy) springContext.getBean(tradingStrategyBeanName);
-                } else {
-                    strategyImpl = ConfigurableComponentFactory.createComponent(tradingStrategyClassname);
-                }
+                TradingStrategy strategyImpl = obtainTradingStrategyInstance(tradingStrategy);;
                 strategyImpl.init(exchangeAdapter, tradingMarket, tradingStrategyConfig);
 
                 LOG.info(() -> "Initialized trading strategy successfully. Name: [" + tradingStrategy.getName()
@@ -619,5 +614,20 @@ public class TradingEngine {
         }
 
         LOG.info(() -> "Loaded and set Market configuration successfully!");
+    }
+
+    private TradingStrategy obtainTradingStrategyInstance(StrategyConfig tradingStrategy) {
+        final String tradingStrategyClassname = tradingStrategy.getClassName();
+        final String tradingStrategyBeanName = tradingStrategy.getBeanName();
+
+        TradingStrategy strategyImpl = null;
+        if (tradingStrategyBeanName != null) {
+            // if beanName is configured, try get the bean first
+            strategyImpl = (TradingStrategy) springContext.getBean(tradingStrategyBeanName);
+        }
+        if (strategyImpl != null) {
+            strategyImpl = ConfigurableComponentFactory.createComponent(tradingStrategyClassname);
+        }
+        return strategyImpl;
     }
 }
