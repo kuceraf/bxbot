@@ -52,6 +52,7 @@ import com.gazbert.bxbot.trading.api.TradingApiException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.stereotype.Component;
 
@@ -140,6 +141,9 @@ public class TradingEngine {
      * Manual intervention is then required to restart the bot.
      */
     private BigDecimal emergencyStopBalance;
+
+    @Autowired
+    private ApplicationContext springContext;
 
     private String botId;
     private String botName;
@@ -574,6 +578,7 @@ public class TradingEngine {
             if (strategyDescriptions.containsKey(strategyToUse)) {
                 final StrategyConfig tradingStrategy = strategyDescriptions.get(strategyToUse);
                 final String tradingStrategyClassname = tradingStrategy.getClassName();
+                final String tradingStrategyBeanName = tradingStrategy.getBeanName();
 
                 // Grab optional config for the Trading Strategy
                 final StrategyConfigItems tradingStrategyConfig = new StrategyConfigItems();
@@ -590,7 +595,12 @@ public class TradingEngine {
                  * Load the Trading Strategy impl, instantiate it, set its config, and store in the cached
                  * Trading Strategy execution list.
                  */
-                final TradingStrategy strategyImpl = ConfigurableComponentFactory.createComponent(tradingStrategyClassname);
+                TradingStrategy strategyImpl;
+                if (tradingStrategyBeanName != null) {
+                    strategyImpl = (TradingStrategy) springContext.getBean(tradingStrategyBeanName);
+                } else {
+                    strategyImpl = ConfigurableComponentFactory.createComponent(tradingStrategyClassname);
+                }
                 strategyImpl.init(exchangeAdapter, tradingMarket, tradingStrategyConfig);
 
                 LOG.info(() -> "Initialized trading strategy successfully. Name: [" + tradingStrategy.getName()
